@@ -29,3 +29,9 @@ npm run build
 ```
 
 -> Compiled files will be in /dist folder
+
+
+### Run in debug mode
+```bash
+npm start -- --gv-debug
+```
