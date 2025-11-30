@@ -1,4 +1,4 @@
-# Gamepad Overlay
+# Gamepad Viewer
 
 Clean, lightweight, always-on-top gamepad viewer on your screen.
 
