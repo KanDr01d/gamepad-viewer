@@ -1,0 +1,19 @@
+{
+  "name": "gamepad-viewer",
+  "version": "1.0.0",
+  "description": "Displays live status about gamepads connected to your computer",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^39.2.4",
+    "electron-builder": "^26.0.12"
+  }
+}
