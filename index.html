@@ -157,5 +157,125 @@
 
 	<script src="js/jquery.min.js"></script>
 	<script src="js/gamepad.js"></script>
+	
+	<script>
+	// FINAL WORKING VERSION — DO NOT CHANGE ANYTHING BELOW
+	let forcedSkin = null;  // remembers manual skin override
+
+	window.electronAPI?.onChangeSkin((skin) => {
+	  if (!window.gamepad) return;
+
+	  if (window.__debug) {
+	    const d=new Date(),pad=(n,w=2)=>String(n).padStart(w,'0');
+	    const ts=`${pad(d.getDate())}_${pad(d.getMonth()+1)}_${pad(d.getFullYear()%100)}---${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}2`;
+	    const line = `[${ts}] [RENDER] onChangeSkin ${JSON.stringify(skin)}`;
+	    console.log(line);
+	    window.electronAPI?.debugLog(line);
+	  }
+
+	  // Remember if user manually changed skin (for Auto mode)
+	  forcedSkin = skin === 'auto' ? null : skin;
+
+	  // Force the skin change
+	  window.gamepad.changeSkin(skin);
+
+	  // CRITICAL FIX: Force immediate render using last known state
+	  if (window.gamepad.index !== null) {
+		const gp = navigator.getGamepads()[window.gamepad.index];
+		if (gp) {
+		  // Restore the live gamepad data so polling continues
+		  window.gamepad.gamepads[window.gamepad.index] = gp;
+		  window.gamepad.map(window.gamepad.index);
+		}
+	  }
+
+	  // Override auto-detection from now on if not 'auto'
+	  if (skin !== 'auto') {
+		window.gamepad.detectGamepad = () => forcedSkin;
+	  } else {
+		// Restore real auto-detection
+		delete window.gamepad.detectGamepad;
+	  }
+	});
+
+	// Auto-detection override: if user picked manual skin, ignore real controller
+	const originalDetect = window.gamepad?.detectGamepad;
+	window.gamepad.detectGamepad = function() {
+	  return forcedSkin || (originalDetect ? originalDetect.call(this) : 'auto');
+	};
+
+	// Other commands (unchanged)
+	window.electronAPI?.onChangeColor((color) => {
+	  if (window.__debug) {
+	    const d=new Date(),pad=(n,w=2)=>String(n).padStart(w,'0');
+	    const ts=`${pad(d.getDate())}_${pad(d.getMonth()+1)}_${pad(d.getFullYear()%100)}---${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}2`;
+	    const line = `[${ts}] [RENDER] onChangeColor ${JSON.stringify(color)}`;
+	    console.log(line);
+	    window.electronAPI?.debugLog(line);
+	  }
+	  window.gamepad?.changeGamepadColor(color || '');
+	});
+
+	window.electronAPI?.onChangeBackground((bg) => {
+	  if (window.__debug) {
+	    const d=new Date(),pad=(n,w=2)=>String(n).padStart(w,'0');
+	    const ts=`${pad(d.getDate())}_${pad(d.getMonth()+1)}_${pad(d.getFullYear()%100)}---${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}2`;
+	    const line = `[${ts}] [RENDER] onChangeBackground ${JSON.stringify(bg)}`;
+	    console.log(line);
+	    window.electronAPI?.debugLog(line);
+	  }
+	  window.gamepad?.changeBackgroundStyle(bg);
+	});
+
+	window.electronAPI?.onToggleTriggers((on) => {
+	  if (window.__debug) {
+	    const d=new Date(),pad=(n,w=2)=>String(n).padStart(w,'0');
+	    const ts=`${pad(d.getDate())}_${pad(d.getMonth()+1)}_${pad(d.getFullYear()%100)}---${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}2`;
+	    const line = `[${ts}] [RENDER] onToggleTriggers ${JSON.stringify(on)}`;
+	    console.log(line);
+	    window.electronAPI?.debugLog(line);
+	  }
+	  window.gamepad?.toggleTriggersMeter(on);
+	});
+
+	// Debug flag from main: when enabled, wrap key methods to log calls
+	window.electronAPI?.onDebug((on) => {
+	  window.__debug = !!on;
+	  if (!window.__debug) return;
+	  const ts = () => { const d=new Date(),pad=(n,w=2)=>String(n).padStart(w,'0'); return `${pad(d.getDate())}_${pad(d.getMonth()+1)}_${pad(d.getFullYear()%100)}---${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}.${pad(d.getMilliseconds(),3)}2`; };
+	  const log = (...a) => {
+	    const s = a.map(x => { try { return typeof x==='string' ? x : JSON.stringify(x); } catch { return String(x); } }).join(' ');
+	    const line = `[${ts()}] [RENDER] ${s}`;
+	    console.log(line);
+	    window.electronAPI?.debugLog(line);
+	  };
+	  const wrapAll = () => {
+	    if (!window.gamepad) return;
+	    const gp = window.gamepad;
+	    const wrap = (obj, method) => {
+	      if (typeof obj[method] !== 'function' || obj[method].__wrapped) return;
+	      const orig = obj[method];
+	      obj[method] = function(...args) {
+	        log(`gamepad.${method}()`, ...args);
+	        return orig.apply(this, args);
+	      };
+	      obj[method].__wrapped = true;
+	    };
+	    [
+	      'map','clear','loadTemplate','pollStatus','updateButtons','updateAxes',
+	      'changeSkin','changeBackgroundStyle','changeGamepadColor','changeZoom',
+	      'toggleGamepadType','toggleDebug','toggleHelp','toggleTriggersMeter',
+	      'onGamepadConnect','onGamepadDisconnect','onKeyDown','onResize',
+	      'displayPlaceholder','displayInstructions','displayOverlay'
+	    ].forEach(m => wrap(gp, m));
+	    log('Debug wrappers installed');
+	  };
+	  if (window.gamepad) {
+	    wrapAll();
+	  } else {
+	    const t = setInterval(() => { if (window.gamepad) { wrapAll(); clearInterval(t); } }, 50);
+	  }
+	});
+	</script>
 </body>
 </html>
